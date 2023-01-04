@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}Welcome | {% endblock %}
+
+{% block content %}
+<div class="container">
+  <form method="POST" action="">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="emailControlInput1" class="form-label">Username</label>
+        <input type="username" name="username" class="form-control" id="emailControlInput1" placeholder="username">
+      </div>
+      <div class="mb-3">
+        <label for="pw1ControlInput1" class="form-label">Password</label>
+        <input type="password" name="password1" class="form-control" id="pw1ControlInput1">
+      </div>
+      <div class="mb-3">
+        <label for="pw2ControlInput1" class="form-label">Password Confirmation</label>
+        <input type="password" name="password2" class="form-control" id="pw2ControlInput1">
+      </div>
+      <input class="btn btn-light" type="submit" value="register">
+  </form>
+</div>
+
+{% endblock %}

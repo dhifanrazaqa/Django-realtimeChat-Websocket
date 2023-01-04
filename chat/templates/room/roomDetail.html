@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+
+{% block title %}Welcome | {% endblock %}
+
+{% block content %}
+{% if request.user.is_authenticated %}
+<div class="container">
+  <div class="row clearfix">
+      <div class="col-lg-12">
+          <div class="card chat-app">
+            <div id="plist" class="people-list">
+                <h5>Public Chat</h5>
+                <ul class="list-unstyled chat-list mt-2 mb-0">
+                  {% for room in rooms %}
+                    <li class="clearfix">
+                        <img src="https://www.kindpng.com/picc/m/11-112940_transparent-transparent-background-people-icon-png-png-download.png" alt="avatar">
+                        <div class="about">
+                            <a style="text-decoration:none; color: black;" href="{% url 'roomDetail' room.slug %}" class="name">{{ room.roomName }}</a>
+                        </div>
+                    </li>
+                  {% endfor %}
+                </ul>
+                <h5>Private Chat</h5>
+                <ul class="list-unstyled chat-list mt-2 mb-0">
+                  {% for group in groups %}
+                  {% if request.user in group.participants.all %}
+                    <li class="clearfix">
+                        <img src="https://icons.veryicon.com/png/o/internet--web/55-common-web-icons/person-4.png" alt="avatar">
+                        <div class="about">
+                            {% for participant in group.participants.all %}
+                            {% if request.user != participant %}
+                            <a style="text-decoration:none; color: black;" href="{% url 'groupDetail' group.slug %}" class="name">{{ participant }}</a>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </li>
+                  {% endif %}
+                  {% endfor %}
+                </ul>
+              </div>
+              <div class="chat">
+                  <div class="chat-header clearfix">
+                      <div class="row">
+                          <div class="col-lg-6">
+                              <a href="javascript:void(0);" data-toggle="modal" data-target="#view_info">
+                                  <img src="https://www.kindpng.com/picc/m/11-112940_transparent-transparent-background-people-icon-png-png-download.png" alt="avatar">
+                              </a>
+                              <div class="chat-about">
+                                  <h6 class="m-b-0">{{ room.roomName }}</h6>
+                              </div>
+                          </div>  
+                      </div>
+                  </div>
+                  <div class="chat-history" id="chat-hist"  style="height: 400px; overflow-y: auto;">
+                      <ul class="m-b-0" id="chat-messages">
+                        {% for message in messages %}
+                          {% if request.user == message.user %}
+                          <li class="clearfix">
+                              <div class="message-data text-end">
+                                  <span class="message-data-time">{{ message.createdAt|date:'d/m/y' }}</span>
+                              </div>
+                              <div class="message other-message float-right"> {{ message.content }} </div>
+                          </li>
+                          {% else %}
+                          <li class="clearfix">
+                            <div class="message-data">
+                                <span class="message-data-time"><b>{{ message.user }}</b></span>
+                                <br>
+                                <span class="message-data-time">{{ message.createdAt|date:'d/m/y' }}</span>
+                            </div>
+                            <div class="message my-message"> {{ message.content }} </div>                                    
+                          </li>
+                          {% endif %}
+                        {% endfor %}
+                      </ul>
+                  </div>
+                  <div class="chat-message clearfix">
+                    <form method="POST" action="">
+                      {% csrf_token %}
+                      <div class="mb-3">
+                        <input type="message" name="message" class="form-control" id="msgControlInput1" placeholder="Enter text here...">
+                      </div>
+                      <input class="btn btn-light pull-right" id="submit" type="submit" value="Send">
+                    </form>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ request.user.username|json_script:"user_username" }}
+{{ room.slug|json_script:"room_name" }}
+<script>
+  const user_username = JSON.parse(document.getElementById('user_username').textContent);
+  const roomName = JSON.parse(document.getElementById('room_name').textContent);
+  const today = new Date();
+  const yyyy = today.getFullYear().toString().substr(-2);
+  let mm = today.getMonth() + 1; // Months start at 0!
+  let dd = today.getDate();
+
+  if (dd < 10) dd = '0' + dd;
+  if (mm < 10) mm = '0' + mm;
+
+  const formattedToday = dd + '/' + mm + '/' + yyyy;
+
+  document.querySelector('#submit').onclick = function (e) {
+      e.preventDefault();
+      const messageInputDom = document.querySelector('#msgControlInput1');
+      const message = messageInputDom.value;
+      chatSocket.send(JSON.stringify({
+          'message': message,
+          'username': user_username,
+          'room': roomName,
+          'category':'room'
+      }));
+      messageInputDom.value = '';
+  };
+
+
+  const chatSocket = new WebSocket(
+      'ws://' +
+      window.location.host +
+      '/ws/' +
+      roomName +
+      '/'
+  );
+
+  chatSocket.onmessage = function (e) {
+      const data = JSON.parse(e.data);
+      console.log(data)
+      console.log(data.username, user_username)
+      if(data.message) {
+        let htmlUser = '<li class="clearfix">';
+          htmlUser += '<div class="message-data text-end">';
+          htmlUser += '<span class="message-data-time">' + formattedToday + '</span>';
+          htmlUser += '</div>';
+          htmlUser += '<div class="message other-message float-right">'+ data.message +'</div>';
+          htmlUser += '</li>';
+
+        let html = '<li class="clearfix">';
+          html += '<div class="message-data">';
+          html += '<span class="message-data-time"><b>' + data.username + '</b></span>';
+          html += '<br>';
+          html += '<span class="message-data-time">' + formattedToday + '</span>';
+          html += '</div>';
+          html += '<div class="message my-message">'+ data.message +'</div>';
+          html += '</li>';
+        
+        data.username == user_username ?
+        document.querySelector('#chat-messages').innerHTML += htmlUser
+        :
+        document.querySelector('#chat-messages').innerHTML += html;
+        scrollToBottom();
+      }
+  }
+
+  function scrollToBottom() {
+      const objDiv = document.querySelector('#chat-hist');
+      objDiv.scrollTop = objDiv.scrollHeight;
+  }
+
+  scrollToBottom();
+</script>
+
+{% endblock %}

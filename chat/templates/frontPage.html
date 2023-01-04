@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Welcome | {% endblock %}
+
+{% block content %}
+
+<div class="container">
+<div class="row">
+    <div class="col-lg-12" style="padding: 5%;">
+        <div class="card">
+            <div id="plist" class="people-list" style="padding: 5%;">
+                <h5>Public Chat</h5>
+                <ul class="list-unstyled chat-list mt-2 mb-0">
+                  {% for room in rooms %}
+                    <li class="clearfix">
+                        <img src="https://www.kindpng.com/picc/m/11-112940_transparent-transparent-background-people-icon-png-png-download.png" alt="avatar">
+                        <div class="about">
+                            <a style="text-decoration:none; color: black;" href="{% url 'roomDetail' room.slug %}" class="name">{{ room.roomName }}</a>
+                        </div>
+                    </li>
+                  {% endfor %}
+                </ul>
+                <h5>Private Chat</h5>
+                <ul class="list-unstyled chat-list mt-2 mb-0">
+                  {% for group in groups %}
+                  {% if request.user in group.participants.all %}
+                    <li class="clearfix">
+                        <img src="http://cdn.onlinewebfonts.com/svg/img_183066.png" alt="avatar">
+                        <div class="about">
+                            {% for participant in group.participants.all %}
+                            {% if request.user != participant %}
+                            <a style="text-decoration:none; color: black;" href="{% url 'groupDetail' group.slug %}" class="name">{{ participant }}</a>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </li>
+                  {% endif %}
+                  {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+{% endblock %}
